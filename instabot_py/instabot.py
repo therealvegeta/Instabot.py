@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-from fake_useragent import UserAgent
 from .sql_updates import check_and_insert_user_agent
 from .sql_updates import get_username_random, get_username_to_unfollow_random
 from .sql_updates import (
@@ -34,47 +33,17 @@ import pickle
 
 python_version_test = f"If you are reading this error, you are not running Python 3.6 or greater. Check 'python --version' or 'python3 --version'."
 
-try:
-    from pip._internal import main
-except Exception as err:
-    print(">>> Please install the latest version of pip")
-    print(err)
-
 
 # Required Dependencies and Modules, offer to install them automatically
-required_modules = ["requests", "instaloader", "fake_useragent", "threading"]
+# Keep fake_useragent last, quirk for pythonanywhere
+required_modules = ["requests", "instaloader", "threading", "fake_useragent"]
 
 for modname in required_modules:
     try:
         # try to import the module normally and put it in globals
         globals()[modname] = importlib.import_module(modname)
     except ImportError as e:
-        module_install_question = str(
-            input(
-                "\nOne or more required modules are missing.\n Would you like to try install them automatically? (yes/no): "
-            )
-        )
-        if module_install_question == "yes" or module_install_question == "y":
-            try:
-                result = main(["install", "-r", "requirements.txt", "--quiet"])
-
-                if result != 0:  # if pip could not install it reraise the error
-                    print(
-                        "Error installing modules. Please install manually using requirements.txt"
-                    )
-                    raise
-                else:
-                    # if the install was sucessful, put modname in globals
-                    print(
-                        "Modules in requirements.txt installed successfuly. Loading...\n\n"
-                    )
-                    globals()[modname] = importlib.import_module(modname)
-            except:
-                print(
-                    "Error installing modules. Please make sure you have installed the latest version of pip.\n You can install manually using requirements.txt"
-                )
-                raise
-        else:
+        if modname is not "fake_useragent":
             print(
                 f"Cannot continue without module {modname} Please install dependencies in requirements.txt. Exiting."
             )
@@ -265,8 +234,32 @@ class InstaBot:
         )
         self.follows_db_c = self.follows_db.cursor()
         check_and_update(self)
-        fake_ua = UserAgent()
-        self.user_agent = check_and_insert_user_agent(self, str(fake_ua.random))
+        list_of_ua = [
+            "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; FSL 7.0.6.01001)",
+            "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; FSL 7.0.7.01001)",
+            "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; FSL 7.0.5.01003)",
+            "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0",
+            "Mozilla/5.0 (X11; U; Linux x86_64; de; rv:1.9.2.8) Gecko/20100723 Ubuntu/10.04 (lucid) Firefox/3.6.8",
+            "Mozilla/5.0 (Windows NT 5.1; rv:13.0) Gecko/20100101 Firefox/13.0.1",
+            "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:11.0) Gecko/20100101 Firefox/11.0",
+            "Mozilla/5.0 (X11; U; Linux x86_64; de; rv:1.9.2.8) Gecko/20100723 Ubuntu/10.04 (lucid) Firefox/3.6.8",
+            "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; .NET CLR 1.0.3705)",
+            "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)",
+            "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0; .NET CLR 2.0.50727; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729)",
+            "Opera/9.80 (Windows NT 5.1; U; en) Presto/2.10.289 Version/12.01",
+            "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727)",
+            "Mozilla/5.0 (Windows NT 5.1; rv:5.0.1) Gecko/20100101 Firefox/5.0.1",
+            "Mozilla/5.0 (Windows NT 6.1; rv:5.0) Gecko/20100101 Firefox/5.02",
+            "Mozilla/5.0 (Windows NT 6.0) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.112 Safari/535.1",
+            "Mozilla/4.0 (compatible; MSIE 6.0; MSIE 5.5; Windows NT 5.0) Opera 7.02 Bork-edition [en]",
+        ]
+        try:
+            fallback = random.sample(list_of_ua, 1)
+            fake_ua = fake_useragent.UserAgent(fallback=fallback[0])
+            self.user_agent = check_and_insert_user_agent(self, str(fake_ua))
+        except:
+            fake_ua = random.sample(list_of_ua, 1)
+            self.user_agent = check_and_insert_user_agent(self, str(fake_ua[0]))
         self.bot_start = datetime.datetime.now()
         self.bot_start_ts = time.time()
         self.start_at_h = start_at_h
